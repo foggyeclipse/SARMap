@@ -2,8 +2,8 @@ import glob
 import tensorflow as tf
 from ann.unet_model import model, dice_mc_metric, dice_bce_mc_loss
 
-print(f'Tensorflow version {tf.__version__}')
-print(f'GPU is {"ON" if tf.config.list_physical_devices("GPU") else "OFF" }')
+print(f"Tensorflow version {tf.__version__}")
+print(f"GPU is {'ON' if tf.config.list_physical_devices('GPU') else 'OFF'}")
 
 
 CLASSES = 5  # 5 классов: Дорога, Деревья, Поле, Вода, Фон
@@ -12,7 +12,7 @@ SAMPLE_SIZE = (256, 256)
 
 OUTPUT_SIZE = (1080, 1920)
 
-COLORS = ['black', '#00FF00', '#808080', '#FFFF00', '#0000FF']  # Серый, Зелёный, Жёлтый, Синий
+COLORS = ["black", "#00FF00", "#808080", "#FFFF00", "#0000FF"]  # Серый, Зелёный, Жёлтый, Синий
 
 def load_images(image, mask):
     image = tf.io.read_file(image)
@@ -53,8 +53,8 @@ def augmentate_images(image, masks):
     return image, masks
 
 
-images = sorted(glob.glob('./data/raw_imgs/*.png'))
-masks = sorted(glob.glob('./data/masks/*.png'))
+images = sorted(glob.glob("./data/raw_imgs/*.png"))
+masks = sorted(glob.glob("./data/masks/*.png"))
 
 images_dataset = tf.data.Dataset.from_tensor_slices(images)
 masks_dataset = tf.data.Dataset.from_tensor_slices(masks)
@@ -71,10 +71,10 @@ test_dataset = dataset.skip(2000).take(100).cache()
 train_dataset = train_dataset.batch(8)
 test_dataset = test_dataset.batch(8)
 
-model.load_weights('ann/weights/model.weights.h5')
+model.load_weights("ann/weights/model.weights.h5")
 
 # Компиляция модели
-model.compile(optimizer='adam', loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
+model.compile(optimizer="adam", loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
 history_dice = model.fit(train_dataset, validation_data=test_dataset, epochs=25, initial_epoch=0)
 
-model.save_weights('weights/model.weights.h5')
+model.save_weights("weights/model.weights.h5")

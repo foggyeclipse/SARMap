@@ -26,7 +26,7 @@ def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
     mask1 = np.zeros((result.shape[0]+2, result.shape[1]+2), np.uint8)
     cv2.floodFill(result, mask1, center, 255)
 
-    p = p.split('.')[0].split('/')[1]
+    p = p.split(".")[0].split("/")[1]
     contours, _ = cv2.findContours(result, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     contour = contours[0]
@@ -43,5 +43,5 @@ def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
 
     latlng_coords = pixel_to_latlng(coords, img_size, map_center, scale_factor, scale_factor_y)
 
-    with open(f'./temp/{p}.txt', "w") as file:
+    with open(f"./temp/{p}.txt", "w") as file:
         file.write(str(latlng_coords))

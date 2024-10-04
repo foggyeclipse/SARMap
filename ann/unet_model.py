@@ -16,7 +16,7 @@ def downsample_block(filters, size, batch_norm=True):
     result = tf.keras.Sequential()
     
     result.add(
-      tf.keras.layers.Conv2D(filters, size, strides=2, padding='same',
+      tf.keras.layers.Conv2D(filters, size, strides=2, padding="same",
                              kernel_initializer=initializer, use_bias=False))
 
     if batch_norm:
@@ -31,7 +31,7 @@ def upsample_block(filters, size, dropout=False):
     result = tf.keras.Sequential()
     
     result.add(
-        tf.keras.layers.Conv2DTranspose(filters, size, strides=2, padding='same',
+        tf.keras.layers.Conv2DTranspose(filters, size, strides=2, padding="same",
                                         kernel_initializer=initializer, use_bias=False))
 
     result.add(tf.keras.layers.BatchNormalization())
@@ -44,8 +44,8 @@ def upsample_block(filters, size, dropout=False):
 
 def output_layer(size):
     initializer = tf.keras.initializers.GlorotNormal()
-    return tf.keras.layers.Conv2DTranspose(CLASSES, size, strides=2, padding='same',
-                                           kernel_initializer=initializer, activation='sigmoid')
+    return tf.keras.layers.Conv2DTranspose(CLASSES, size, strides=2, padding="same",
+                                           kernel_initializer=initializer, activation="sigmoid")
 
 inp_layer = input_layer()
 

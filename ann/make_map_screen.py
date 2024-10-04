@@ -57,9 +57,9 @@ def save_map_image(radius_km, center_coords, output_image_path="map_image.png"):
 
     # Добавляем спутниковый слой ESRI с атрибуцией
     folium.TileLayer(
-        tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attr = 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        name = 'ESRI Satellite',
+        tiles = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr = "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+        name = "ESRI Satellite",
         overlay = False,
         control = False
     ).add_to(m)
@@ -67,9 +67,9 @@ def save_map_image(radius_km, center_coords, output_image_path="map_image.png"):
     folium.Circle(
         location = map_center,
         radius = radius_km * 1000,  # Переводим радиус из километров в метры
-        color = 'blue',
+        color = "blue",
         fill = True,
-        fill_color = '#add8e6',
+        fill_color = "#add8e6",
         fill_opacity = 0.5
     )
 
