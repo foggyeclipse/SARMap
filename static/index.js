@@ -64,5 +64,31 @@ $(document).ready(function () {
                 longitude: parseCoordinate($('#finding_lon').val())
             }
         };
+
+        $.ajax({
+            url: '/radius',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (response) {
+                if (response && response.coordinates_psr) {
+                    document.getElementById('result').classList.add('alert', 'alert-info');
+                    document.getElementById('result').innerHTML = "Вероятности поведения потерявшегося на текущий момент:<br>";
+                    document.getElementById('result').innerHTML += response.behavior.replace(/%/g, '%  <br>');
+                    $('#loader').hide();
+                    $('#overlay').hide();
+                } else {
+                    $('#overlay').hide();
+                    $('#loader').hide();
+                    alert('Не удалось получить координаты.');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', status, error);
+                $('#overlay').hide();
+                $('#loader').hide();
+                alert('Ошибка при отправке данных.');
+            }
+        });
     });
 });
