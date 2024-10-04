@@ -28,7 +28,7 @@ ZOOM_LEVELS = {
     (13, 26): 0.235,
     (26, 53): 0.1175,
     (53, 106): 0.05875,
-    (106, float('inf')): 0.029375,
+    (106, float("inf")): 0.029375,
 }
 
 def get_zoom_factor(radius):
@@ -51,16 +51,16 @@ def calculate_pixels_per_centimeter(resolution_x, resolution_y, screen_diagonal_
 
 
 def make_real_radius(coords_psr, prev_radius, radius):
-    coords_psr = (coords_psr['latitude'], coords_psr['longitude'])
+    coords_psr = (coords_psr["latitude"], coords_psr["longitude"])
     prev_radius.append(radius) 
     frames = []
     real_radius = []
-    if not os.path.exists('temp'):
-        os.makedirs('temp')
+    if not os.path.exists("temp"):
+        os.makedirs("temp")
 
     for i, r in enumerate(prev_radius):
         r_ceil = math.ceil(r)
-        image_filename = f'temp/map_image{i}.png'
+        image_filename = f"temp/map_image{i}.png"
         save_map_image(r_ceil, coords_psr, image_filename)
         frames.append(image_filename)
 
@@ -68,7 +68,7 @@ def make_real_radius(coords_psr, prev_radius, radius):
 
     try:
         for i, frame in enumerate(frames):
-            masked_frame = f'temp/masked_{frame.split('/')[1]}'
+            masked_frame = f"temp/masked_{frame.split('/')[1]}"
             post_edit(masked_frame)
 
             zoom_factor = get_zoom_factor(prev_radius[i])
@@ -84,8 +84,8 @@ def make_real_radius(coords_psr, prev_radius, radius):
         print(f"Произошла ошибка: {e}")
     
     for f in frames:
-        f = f.split('.')[0].split('/')[1]
-        with open(f'temp/masked_{f}.txt', 'r') as data:
+        f = f.split(".")[0].split("/")[1]
+        with open(f"temp/masked_{f}.txt", "r") as data:
                 radius_string = data.read()
                 real_radius.append(ast.literal_eval(radius_string))
     
@@ -96,8 +96,8 @@ def get_weather_data(date, time):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
         "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
     }
-    day, month, year = date.split('.')
-    hour = time.split(':')[0]
+    day, month, year = date.split(".")
+    hour = time.split(":")[0]
 
     url = f"https://arhivpogodi.ru/arhiv/sankt-peterburg/{year}/{month}/"
     response = requests.get(url, headers=headers)
@@ -107,10 +107,10 @@ def get_weather_data(date, time):
         return
 
     soup = BeautifulSoup(response.text, "html.parser")
-    day_pattern = rf',\s*({int(day)})\b'
+    day_pattern = rf",\s*({int(day)})\b"
 
-    date_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2')
-    holydate_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger')
+    date_blocks = soup.find_all("div", class_="font-size-unset d-inline-block position-sticky px-3 pb-2")
+    holydate_blocks = soup.find_all("div", class_="font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger")
 
     weather = parse_weather(date_blocks, day_pattern, hour) or parse_weather(holydate_blocks, day_pattern, hour)
 
@@ -123,71 +123,71 @@ def parse_weather(date_blocks, day_pattern, hour):
     for date_block in date_blocks:
         date_text = date_block.get_text(strip=True)
         if re.search(day_pattern, date_text):
-            hourly_blocks = date_block.find_parent('div').find_next_sibling().find_all('div', class_='d-inline-block')
+            hourly_blocks = date_block.find_parent("div").find_next_sibling().find_all("div", class_="d-inline-block")
             for hour_block in hourly_blocks:
-                hour_text = hour_block.find('div', class_='text-center font-size-unset px-1 border-bottom').get_text(strip=True)
+                hour_text = hour_block.find("div", class_="text-center font-size-unset px-1 border-bottom").get_text(strip=True)
                 if hour_text == hour:
-                    rain_block = hour_block.find('div', class_='text-center font-size-unset px-1').find('img')
+                    rain_block = hour_block.find("div", class_="text-center font-size-unset px-1").find("img")
                     if rain_block:
-                        if rain_block['src'] in ['/images/09n.png', '/images/09d.png', '/images/10n.png', '/images/10d.png', '/images/50n.png']:
-                            return 'bad'
-                        return 'good'
+                        if rain_block["src"] in ["/images/09n.png", "/images/09d.png", "/images/10n.png", "/images/10d.png", "/images/50n.png"]:
+                            return "bad"
+                        return "good"
     return None
 
 def calculate_probability(data):
     probabilities = {
-        'остаться на месте': 0.0,
-        'двигаться с ориентированием': 0.0,
-        'двигаться без ориентирования': 0.0,
-        'искать укрытие': 0.0
+        "остаться на месте": 0.0,
+        "двигаться с ориентированием": 0.0,
+        "двигаться без ориентирования": 0.0,
+        "искать укрытие": 0.0
     }
 
-    age = data.get('Возраст', 30)
-    gender = data.get('Пол', 'Неизвестно')
-    physical_condition = data.get('Физическое состояние', 'Здоров')
-    psychological_condition = data.get('Психическое состояние', 'Устойчив')
-    experience = data.get('Опыт нахождения в дикой природе', 'Низкий')
-    location = data.get('Знание местности', 'Нет')
-    weather = get_weather_data(data.get('Дата'), data.get('Время'))
-    has_phone = data.get('Наличие телефона', 'Нет')
-    time_of_day = data.get('Время суток', 'День')
-    moral_obligations = data.get('Моральные обязательства', 'Слабые')
-    external_signals = data.get('Внешние сигналы', 'Нет')
+    age = data.get("Возраст", 30)
+    gender = data.get("Пол", "Неизвестно")
+    physical_condition = data.get("Физическое состояние", "Здоров")
+    psychological_condition = data.get("Психическое состояние", "Устойчив")
+    experience = data.get("Опыт нахождения в дикой природе", "Низкий")
+    location = data.get("Знание местности", "Нет")
+    weather = get_weather_data(data.get("Дата"), data.get("Время"))
+    has_phone = data.get("Наличие телефона", "Нет")
+    time_of_day = data.get("Время суток", "День")
+    moral_obligations = data.get("Моральные обязательства", "Слабые")
+    external_signals = data.get("Внешние сигналы", "Нет")
 
-    if physical_condition in ['injury', 'health_deterioration']:
-        probabilities['остаться на месте'] += 0.4
-    if psychological_condition == 'unstable':
-        probabilities['двигаться без ориентирования'] += 0.3
-    if location == 'no' or experience == 'low':
-        probabilities['двигаться без ориентирования'] += 0.3
-    if weather == 'bad':
-        probabilities['искать укрытие'] += 0.3
-    if has_phone == 'yes':
-        probabilities['остаться на месте'] += 0.5
-    if time_of_day in ['evening', 'night']:
-        probabilities['искать укрытие'] += 0.4
-    if psychological_condition == 'stable' and moral_obligations == 'strong':
-        probabilities['двигаться с ориентированием'] += 0.4
-    if external_signals == 'yes':
-        probabilities['двигаться с ориентированием'] += 0.3
-    if moral_obligations == 'strong':
-        probabilities['остаться на месте'] += 0.3
+    if physical_condition in ["injury", "health_deterioration"]:
+        probabilities["остаться на месте"] += 0.4
+    if psychological_condition == "unstable":
+        probabilities["двигаться без ориентирования"] += 0.3
+    if location == "no" or experience == "low":
+        probabilities["двигаться без ориентирования"] += 0.3
+    if weather == "bad":
+        probabilities["искать укрытие"] += 0.3
+    if has_phone == "yes":
+        probabilities["остаться на месте"] += 0.5
+    if time_of_day in ["evening", "night"]:
+        probabilities["искать укрытие"] += 0.4
+    if psychological_condition == "stable" and moral_obligations == "strong":
+        probabilities["двигаться с ориентированием"] += 0.4
+    if external_signals == "yes":
+        probabilities["двигаться с ориентированием"] += 0.3
+    if moral_obligations == "strong":
+        probabilities["остаться на месте"] += 0.3
 
     if age < 12:
-        probabilities['остаться на месте'] += 0.5
-        probabilities['искать укрытие'] += 0.2
+        probabilities["остаться на месте"] += 0.5
+        probabilities["искать укрытие"] += 0.2
     elif 12 <= age < 18:
-        probabilities['двигаться без ориентирования'] += 0.4
+        probabilities["двигаться без ориентирования"] += 0.4
     elif age >= 60:
-        probabilities['остаться на месте'] += 0.3
-        probabilities['искать укрытие'] += 0.3
+        probabilities["остаться на месте"] += 0.3
+        probabilities["искать укрытие"] += 0.3
 
-    if gender == 'female':
-        probabilities['искать укрытие'] += 0.2
-        probabilities['остаться на месте'] += 0.2
-    elif gender == 'male':
-        probabilities['двигаться с ориентированием'] += 0.2
-        probabilities['двигаться без ориентирования'] += 0.2
+    if gender == "female":
+        probabilities["искать укрытие"] += 0.2
+        probabilities["остаться на месте"] += 0.2
+    elif gender == "male":
+        probabilities["двигаться с ориентированием"] += 0.2
+        probabilities["двигаться без ориентирования"] += 0.2
 
     total_probability = sum(probabilities.values())
 
@@ -227,8 +227,8 @@ def get_behavior_data(data, current_time, current_date, bad_mentality=0):
         "Знание местности": str(data.get("local_knowledge")),
         "Наличие телефона": str(data.get("phone")),
         "Время суток": times_of_day,
-        "Моральные обязательства": str(data.get('moral_obligations')),
-        "Внешние сигналы": str(data.get('external_signals')),
+        "Моральные обязательства": str(data.get("moral_obligations")),
+        "Внешние сигналы": str(data.get("external_signals")),
         "Дата": current_date,
         "Время": f"{current_time}:00"
     }
@@ -249,17 +249,17 @@ def get_behavior_coefficient(behavior_data):
     result_text = match.group(1).strip()
 
     if result_text != "остаться на месте:":
-        result_text = result_text.split('%')[1].split('\n')[1]
+        result_text = result_text.split("%")[1].split("\n")[1]
 
     if result_text == "остаться на месте:":
         behavior_coefficient = 0.0
     elif result_text == "искать укрытие:":
         behavior_coefficient = 0.2
 
-    return behavior_coefficient, result_text.capitalize() + ' ' + str(max_percentage) + '%'
+    return behavior_coefficient, result_text.capitalize() + " " + str(max_percentage) + "%"
 
 def calculate_last_day(data,time_passed, hours, normal_speed, speed_index, total_radius, list_of_radius, day):
-    current_date = data.get('date_of_finding')
+    current_date = data.get("date_of_finding")
     behavior_context, time = get_behavior_data(data, time_passed, current_date)
 
     behavior_data, weather = predict_behavior(behavior_context)
@@ -355,7 +355,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
         total_radius += interval_radius
 
         if(time_passed==0 or first_day):
-            list_of_radius += f'День {day}: '
+            list_of_radius += f"День {day}: "
             first_day=False
 
         list_of_radius += " ".join([str(round(interval_radius, 2)), str(behavior_main), str(weather), str(time)]) + " "
@@ -371,64 +371,64 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
 @app.route("/")
 def index():
-    return render_template('base.html')
+    return render_template("base.html")
 
-@app.route('/radius', methods=['POST'])
+@app.route("/radius", methods=["POST"])
 def radius():
     data = request.get_json()
     try:
-        coordinates_psr = data.get('coordinates_psr')
-        coordinates_finding = data.get('coordinates_finding')
+        coordinates_psr = data.get("coordinates_psr")
+        coordinates_finding = data.get("coordinates_finding")
 
-        date_of_loss_str = data.get('date_of_loss')
-        time_of_loss_str = data.get('time_of_loss', '00:00')
+        date_of_loss_str = data.get("date_of_loss")
+        time_of_loss_str = data.get("time_of_loss", "00:00")
 
-        date_of_finding_str = data.get('date_of_finding')
-        time_of_finding_str = data.get('time_of_finding', '00:00')
+        date_of_finding_str = data.get("date_of_finding")
+        time_of_finding_str = data.get("time_of_finding", "00:00")
 
         date_time_of_loss_str = f"{date_of_loss_str} {time_of_loss_str}"
         date_time_of_finding_str = f"{date_of_finding_str} {time_of_finding_str}"
         
-        date_time_of_loss = datetime.strptime(date_time_of_loss_str, '%d.%m.%Y %H:%M')
-        date_time_of_finding = datetime.strptime(date_time_of_finding_str, '%d.%m.%Y %H:%M')
+        date_time_of_loss = datetime.strptime(date_time_of_loss_str, "%d.%m.%Y %H:%M")
+        date_time_of_finding = datetime.strptime(date_time_of_finding_str, "%d.%m.%Y %H:%M")
 
         hours_difference = (date_time_of_finding - date_time_of_loss).total_seconds() // 3600
     
-        radius, extra_info, previous_radius = get_radius(data, int(data.get('age')), int(hours_difference))
+        radius, extra_info, previous_radius = get_radius(data, int(data.get("age")), int(hours_difference))
 
         behavior_context = {
-            'Возраст': int(data.get('age')),
-            'Пол': str(data.get('gender')),
-            'Физическое состояние': str(data.get('physical_condition')),
-            'Психическое состояние': str(data.get('mental_condition')),
-            'Опыт нахождения в дикой природе': str(data.get('experience')),
-            'Знание местности': str(data.get('local_knowledge')),
-            'Наличие телефона': str(data.get('phone')),
-            'Время суток': extra_info.split()[-1],
-            'Моральные обязательства': str(data.get('moral_obligations')),
-            'Внешние сигналы': str(data.get('external_signals')),
-            'Дата': data.get('date_of_finding'),
-            'Время': time_of_finding_str
+            "Возраст": int(data.get("age")),
+            "Пол": str(data.get("gender")),
+            "Физическое состояние": str(data.get("physical_condition")),
+            "Психическое состояние": str(data.get("mental_condition")),
+            "Опыт нахождения в дикой природе": str(data.get("experience")),
+            "Знание местности": str(data.get("local_knowledge")),
+            "Наличие телефона": str(data.get("phone")),
+            "Время суток": extra_info.split()[-1],
+            "Моральные обязательства": str(data.get("moral_obligations")),
+            "Внешние сигналы": str(data.get("external_signals")),
+            "Дата": data.get("date_of_finding"),
+            "Время": time_of_finding_str
         }
 
         behavior, _ = predict_behavior(behavior_context)
         real_radius = make_real_radius(coordinates_psr, previous_radius, radius)
 
         return jsonify({
-            'status': 'success',
-            'radius': radius,
-            'coordinates_psr': coordinates_psr,
-            'coordinates_finding': coordinates_finding,
-            'behavior': behavior,
-            'extra_info': extra_info,
-            'previous_radius': previous_radius,
-            'real_radius': real_radius
+            "status": "success",
+            "radius": radius,
+            "coordinates_psr": coordinates_psr,
+            "coordinates_finding": coordinates_finding,
+            "behavior": behavior,
+            "extra_info": extra_info,
+            "previous_radius": previous_radius,
+            "real_radius": real_radius
         })
     
     except ValueError as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 400
+        return jsonify({"status": "error", "message": str(e)}), 400
     except Exception as e:
-        return jsonify({'status': 'error', 'message': 'Не удалось обработать запрос'}), 500
+        return jsonify({"status": "error", "message": "Не удалось обработать запрос"}), 500
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
