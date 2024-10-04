@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Форма ввода данных</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center">Форма ввода данных</h2>
+        <form id="dataForm" method="post" action="/radius">
+            <div class="form-group">
+                <label for="date_of_loss">Дата потери:</label>
+                <input type="text" id="date_of_loss" name="date_of_loss" class="form-control" placeholder="Введите дату потери" required>
+                
+                <label for="time_of_loss">Время потери:</label>
+                <input type="time" id="time_of_loss" name="time_of_loss" class="form-control" value="12:00" placeholder="Введите время потери">
+            </div>
+
+            <div class="form-group">
+                <label for="date_of_finding">Текущая дата:</label>
+                <input type="text" id="date_of_finding" name="date_of_finding" class="form-control readonly-field" placeholder="Введите дату нахождения" required>
+                
+                <label for="time_of_finding">Текущее время:</label>
+                <input type="time" id="time_of_finding" name="time_of_finding" class="form-control" placeholder="Введите текущее время">
+            </div>
+
+            <div class="form-group">
+                <label for="age">Возраст:</label>
+                <input type="number" id="age" name="age" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="gender">Пол:</label>
+                <select id="gender" name="gender" class="form-control" required>
+                    <option value="unknown" selected>Неизвестно</option>
+                    <option value="male">Мужской</option>
+                    <option value="female">Женский</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="physical_condition">Физическое состояние:</label>
+                <select id="physical_condition" name="physical_condition" class="form-control" required>
+                    <option value="unknown" selected>Неизвестно</option>
+                    <option value="healthy">Здоров</option>
+                    <option value="chronic_disease">Хронические заболевания</option>
+                    <option value="injury">Травма</option>
+                    <option value="health_deterioration">Ухудшение здоровья</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="mental_condition">Психическое состояние:</label>
+                <select id="mental_condition" name="mental_condition" class="form-control" required>
+                    <option value="unknown" selected>Неизвестно</option>
+                    <option value="stable">Устойчив</option>
+                    <option value="unstable">Неустойчив</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="psr_lat">Широта центра ПСР:</label>
+                <input type="text" id="psr_lat" name="psr_lat" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="psr_lon">Долгота центра ПСР:</label>
+                <input type="text" id="psr_lon" name="psr_lon" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="finding_lat">Широта нахождения:</label>
+                <input type="text" id="finding_lat" name="finding_lat" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="finding_lon">Долгота нахождения:</label>
+                <input type="text" id="finding_lon" name="finding_lon" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <button type="button" class="btn btn-info" id="toggleAdditionalFields">Дополнительные данные</button>
+            </div>
+
+            <div id="additional_fields" class="hidden-input">
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="tab1-tab" data-toggle="tab" href="#tab1" role="tab" aria-controls="tab1" aria-selected="true">Данные о потерявшемся</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab2-tab" data-toggle="tab" href="#tab2" role="tab" aria-controls="tab2" aria-selected="false">Данные о местности</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                        <div class="form-group">
+                            <label for="experience">Опыт нахождения в дикой природе:</label>
+                            <select id="experience" name="experience" class="form-control">
+                                <option value="unknown" selected>Неизвестно</option>
+                                <option value="low">Низкий</option>
+                                <option value="medium">Средний</option>
+                                <option value="high">Высокий</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="local_knowledge">Знание местности:</label>
+                            <select id="local_knowledge" name="local_knowledge" class="form-control">
+                                <option value="unknown" selected>Неизвестно</option>
+                                <option value="yes">Да</option>
+                                <option value="no">Нет</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Моральные обязательства:</label>
+                            <select id="moral_obligations" name="moral_obligations" class="form-control">
+                                <option value="strong">Сильные</option>
+                                <option value="weak">Слабые</option>
+                                <option value="unknown">Неизвестно</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Наличие телефона:</label>
+                            <select id="phone" name="phone" class="form-control">
+                                <option value="unknown" selected>Неизвестно</option>
+                                <option value="yes">Да</option>
+                                <option value="no">Нет</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Внешние сигналы:</label>
+                            <select id="external_signals" name="external_signals" class="form-control">
+                                <option value="unknown" selected>Неизвестно</option>
+                                <option value="yes">Да</option>
+                                <option value="no">Нет</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                        <div class="form-group">
+                            <label for="terrain_passability">Проходимость местности:</label>
+                            <input type="number" id="terrain_passability" name="terrain_passability" class="form-control" step="0.01" min="0" max="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="path_curvature">Кривизна местности:</label>
+                            <input type="number" id="path_curvature" name="path_curvature" class="form-control" step="0.01" min="0" max="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="slope_angle">Угол наклона местности:</label>
+                            <input type="number" id="slope_angle" name="slope_angle" class="form-control" step="0.01" min="0" max="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group text-center">
+                <button type="submit" class="btn btn-primary">Отправить</button>
+            </div>
+
+            <div class="overlay" id="overlay"></div>
+            <div class="loader" id="loader">
+                <div class="spinner-border"></div>
+            </div>
+        </form>
+
+        <div id="map"></div>
+        <div id="result"></div>
+        <div id="report"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="static/index.js"></script>
+</body>
+</html>
