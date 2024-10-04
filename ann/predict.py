@@ -36,7 +36,7 @@ def apply_colors_to_mask(masks, class_colors):
 
 
 
-model.load_weights('ai/weights/model.weights.h5')
+model.load_weights('ann/weights/model.weights.h5')
 
 SAMPLE_SIZE = (256, 256)
 
@@ -60,4 +60,4 @@ def predict_place(frames):
         
         color_mask_resized = resize(color_mask, frame.shape[:2], preserve_range=True).astype(np.uint8)
         
-        imsave(f'./masked_{os.path.basename(filename)}', color_mask_resized)
+        imsave(f'./temp/masked_{os.path.basename(filename)}', color_mask_resized)

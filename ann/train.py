@@ -71,7 +71,7 @@ test_dataset = dataset.skip(2000).take(100).cache()
 train_dataset = train_dataset.batch(8)
 test_dataset = test_dataset.batch(8)
 
-model.load_weights('ai/weights/model.weights.h5')
+model.load_weights('ann/weights/model.weights.h5')
 
 # Компиляция модели
 model.compile(optimizer='adam', loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
