@@ -7,23 +7,25 @@ from bs4 import BeautifulSoup
 from ann.post_edit import post_edit
 from ann.predict import predict_place
 from datetime import datetime, timedelta
-from radius_mask_post_edit import  make_txt_mask_of_radius
+from radius_mask_post_edit import make_txt_mask_of_radius
 from ann.make_map_screen import save_map_image
 from radius_mask_calculation import make_radius_mask
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
+
 def round_to_nearest_interval(hours):
     if not (0 <= hours <= 24):
         raise ValueError("Число должно быть в диапазоне от 0 до 24")
-    
+
     return (hours // 6) * 6
+
 
 ZOOM_LEVELS = {
     (0, 1): 3.76,
-    (1, 3): 1.88, 
-    (3, 6): 0.94, 
+    (1, 3): 1.88,
+    (3, 6): 0.94,
     (6, 13): 0.47,
     (13, 26): 0.235,
     (26, 53): 0.1175,
@@ -31,28 +33,30 @@ ZOOM_LEVELS = {
     (106, float("inf")): 0.029375,
 }
 
+
 def get_zoom_factor(radius):
     for bounds, factor in ZOOM_LEVELS.items():
         if bounds[0] <= radius < bounds[1]:
             return factor
     return 0.029375
 
+
 def calculate_pixels_per_centimeter(resolution_x, resolution_y, screen_diagonal_inch):
     # Вычисляем разрешение по диагонали
-    diagonal_resolution = (resolution_x ** 2 + resolution_y ** 2) ** 0.5
-    
+    diagonal_resolution = (resolution_x**2 + resolution_y**2) ** 0.5
+
     # Вычисляем PPI (pixels per inch)
     ppi = diagonal_resolution / screen_diagonal_inch
-    
+
     # Конвертируем PPI в пиксели на сантиметр
     pixels_per_centimeter = ppi / 2.54
-    
+
     return pixels_per_centimeter
 
 
 def make_real_radius(coords_psr, prev_radius, radius):
     coords_psr = (coords_psr["latitude"], coords_psr["longitude"])
-    prev_radius.append(radius) 
+    prev_radius.append(radius)
     frames = []
     real_radius = []
     if not os.path.exists("temp"):
@@ -78,18 +82,21 @@ def make_real_radius(coords_psr, prev_radius, radius):
             radius_in_pixel = int(prev_radius[i] * zoom_factor * pixels_per_cm)
 
             result, center = make_radius_mask(masked_frame, radius_in_pixel)
-            make_txt_mask_of_radius(masked_frame, coords_psr, prev_radius[i], result, center)
+            make_txt_mask_of_radius(
+                masked_frame, coords_psr, prev_radius[i], result, center
+            )
 
     except Exception as e:
         print(f"Произошла ошибка: {e}")
-    
+
     for f in frames:
         f = f.split(".")[0].split("/")[1]
         with open(f"temp/masked_{f}.txt", "r") as data:
-                radius_string = data.read()
-                real_radius.append(ast.literal_eval(radius_string))
-    
+            radius_string = data.read()
+            real_radius.append(ast.literal_eval(radius_string))
+
     return real_radius
+
 
 def get_weather_data(date, time):
     headers = {
@@ -109,37 +116,60 @@ def get_weather_data(date, time):
     soup = BeautifulSoup(response.text, "html.parser")
     day_pattern = rf",\s*({int(day)})\b"
 
-    date_blocks = soup.find_all("div", class_="font-size-unset d-inline-block position-sticky px-3 pb-2")
-    holydate_blocks = soup.find_all("div", class_="font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger")
+    date_blocks = soup.find_all(
+        "div", class_="font-size-unset d-inline-block position-sticky px-3 pb-2"
+    )
+    holydate_blocks = soup.find_all(
+        "div",
+        class_="font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger",
+    )
 
-    weather = parse_weather(date_blocks, day_pattern, hour) or parse_weather(holydate_blocks, day_pattern, hour)
+    weather = parse_weather(date_blocks, day_pattern, hour) or parse_weather(
+        holydate_blocks, day_pattern, hour
+    )
 
     if weather:
         return weather
     else:
         print(f"Информация о погоде на {day} число не найдена.")
 
+
 def parse_weather(date_blocks, day_pattern, hour):
     for date_block in date_blocks:
         date_text = date_block.get_text(strip=True)
         if re.search(day_pattern, date_text):
-            hourly_blocks = date_block.find_parent("div").find_next_sibling().find_all("div", class_="d-inline-block")
+            hourly_blocks = (
+                date_block.find_parent("div")
+                .find_next_sibling()
+                .find_all("div", class_="d-inline-block")
+            )
             for hour_block in hourly_blocks:
-                hour_text = hour_block.find("div", class_="text-center font-size-unset px-1 border-bottom").get_text(strip=True)
+                hour_text = hour_block.find(
+                    "div", class_="text-center font-size-unset px-1 border-bottom"
+                ).get_text(strip=True)
                 if hour_text == hour:
-                    rain_block = hour_block.find("div", class_="text-center font-size-unset px-1").find("img")
+                    rain_block = hour_block.find(
+                        "div", class_="text-center font-size-unset px-1"
+                    ).find("img")
                     if rain_block:
-                        if rain_block["src"] in ["/images/09n.png", "/images/09d.png", "/images/10n.png", "/images/10d.png", "/images/50n.png"]:
+                        if rain_block["src"] in [
+                            "/images/09n.png",
+                            "/images/09d.png",
+                            "/images/10n.png",
+                            "/images/10d.png",
+                            "/images/50n.png",
+                        ]:
                             return "bad"
                         return "good"
     return None
+
 
 def calculate_probability(data):
     probabilities = {
         "остаться на месте": 0.0,
         "двигаться с ориентированием": 0.0,
         "двигаться без ориентирования": 0.0,
-        "искать укрытие": 0.0
+        "искать укрытие": 0.0,
     }
 
     age = data.get("Возраст", 30)
@@ -196,10 +226,14 @@ def calculate_probability(data):
 
     return probabilities, weather
 
+
 def predict_behavior(data):
     probabilities, weather = calculate_probability(data)
-    probabilities_str = "\n".join([f"{behavior}: {prob * 100:.2f}%" for behavior, prob in probabilities.items()])
+    probabilities_str = "\n".join(
+        [f"{behavior}: {prob * 100:.2f}%" for behavior, prob in probabilities.items()]
+    )
     return probabilities_str, weather
+
 
 def get_behavior_data(data, current_time, current_date, bad_mentality=0):
     if 6 <= current_time < 12:
@@ -214,8 +248,8 @@ def get_behavior_data(data, current_time, current_date, bad_mentality=0):
     if 0 <= current_time < 10:
         current_time = f"0{current_time}"
 
-    mentality = str(data.get("mental_condition")) 
-    if bad_mentality == 1 and mentality == "stable": 
+    mentality = str(data.get("mental_condition"))
+    if bad_mentality == 1 and mentality == "stable":
         mentality = "unstable"
 
     data_behavior = {
@@ -230,10 +264,11 @@ def get_behavior_data(data, current_time, current_date, bad_mentality=0):
         "Моральные обязательства": str(data.get("moral_obligations")),
         "Внешние сигналы": str(data.get("external_signals")),
         "Дата": current_date,
-        "Время": f"{current_time}:00"
+        "Время": f"{current_time}:00",
     }
 
     return data_behavior, times_of_day
+
 
 def get_behavior_coefficient(behavior_data):
     behavior_coefficient = 1.0
@@ -256,31 +291,61 @@ def get_behavior_coefficient(behavior_data):
     elif result_text == "искать укрытие:":
         behavior_coefficient = 0.2
 
-    return behavior_coefficient, result_text.capitalize() + " " + str(max_percentage) + "%"
+    return (
+        behavior_coefficient,
+        result_text.capitalize() + " " + str(max_percentage) + "%",
+    )
 
-def calculate_last_day(data,time_passed, hours, normal_speed, speed_index, total_radius, list_of_radius, day):
+
+def calculate_last_day(
+    data,
+    time_passed,
+    hours,
+    normal_speed,
+    speed_index,
+    total_radius,
+    list_of_radius,
+    day,
+):
     current_date = data.get("date_of_finding")
     behavior_context, time = get_behavior_data(data, time_passed, current_date)
 
     behavior_data, weather = predict_behavior(behavior_context)
     behavior_coefficient, behavior_main = get_behavior_coefficient(behavior_data)
 
-    interval_radius = (
-        hours
-        * normal_speed
-        * speed_index
-        * behavior_coefficient
-    )
+    interval_radius = hours * normal_speed * speed_index * behavior_coefficient
     total_radius += interval_radius
 
     if time_passed == 0:
         list_of_radius += f"День {day}: "
 
-    list_of_radius += " ".join([str(round(interval_radius, 2)), str(behavior_main), str(weather), str(time)]) + " "
-    
+    list_of_radius += (
+        " ".join(
+            [
+                str(round(interval_radius, 2)),
+                str(behavior_main),
+                str(weather),
+                str(time),
+            ]
+        )
+        + " "
+    )
+
     return total_radius, list_of_radius
 
-def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
+
+def get_radius(
+    data,
+    age,
+    hours_elapsed,
+    terrain_passability=None,
+    path_curvature=None,
+    slope_degree=None,
+    fatigue_level=None,
+    time_of_day=None,
+    weather_conditions=None,
+    group_factor=None,
+):
     normal_speed = 4
 
     if age < 18:
@@ -288,12 +353,16 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     elif age >= 60:
         normal_speed = 2
 
-    terrain_passability_coefficient = terrain_passability if terrain_passability is not None else 1.0
+    terrain_passability_coefficient = (
+        terrain_passability if terrain_passability is not None else 1.0
+    )
     path_curvature_coefficient = path_curvature if path_curvature is not None else 1.0
     slope_degree_coefficient = slope_degree if slope_degree is not None else 1.0
     fatigue_level_coefficient = fatigue_level if fatigue_level is not None else 1.0
     time_of_day_coefficient = time_of_day if time_of_day is not None else 1.0
-    weather_conditions_coefficient = weather_conditions if weather_conditions is not None else 1.0
+    weather_conditions_coefficient = (
+        weather_conditions if weather_conditions is not None else 1.0
+    )
     group_factor_coefficient = group_factor if group_factor is not None else 1.0
 
     speed_index = (
@@ -311,7 +380,9 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     current_date = data.get("date_of_loss")
 
     hours_of_loss, minutes_of_loss = map(int, data.get("time_of_loss").split(":"))
-    hour_of_finding, minutes_of_finding = map(int, data.get("time_of_finding").split(":"))
+    hour_of_finding, minutes_of_finding = map(
+        int, data.get("time_of_finding").split(":")
+    )
 
     time_of_loss_total = hours_of_loss + minutes_of_loss / 60.0
     time_of_finding_total = hour_of_finding + minutes_of_finding / 60.0
@@ -321,57 +392,82 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
     day = 1
     previous_radius = []
-    first_day=True 
+    first_day = True
 
     for i in range(0, hours_elapsed, 6):
-        if(time_passed % 24 == 0 and time_passed != 0):
-            current_date = (datetime.strptime(current_date, "%d.%m.%Y") + timedelta(days=1)).strftime("%d.%m.%Y")
+        if time_passed % 24 == 0 and time_passed != 0:
+            current_date = (
+                datetime.strptime(current_date, "%d.%m.%Y") + timedelta(days=1)
+            ).strftime("%d.%m.%Y")
             time_passed = 0
             day += 1
             previous_radius.append(total_radius)
-        
-        if day == 3: 
-            behavior_context, time = get_behavior_data(data, time_passed, current_date, 1) 
-        else: 
+
+        if day == 3:
+            behavior_context, time = get_behavior_data(
+                data, time_passed, current_date, 1
+            )
+        else:
             behavior_context, time = get_behavior_data(data, time_passed, current_date)
 
         behavior_data, weather = predict_behavior(behavior_context)
         behavior_coefficient, behavior_main = get_behavior_coefficient(behavior_data)
 
-        interval_hours = min(6, hours_elapsed - i) 
+        interval_hours = min(6, hours_elapsed - i)
         if interval_hours != 6:
             continue
 
         if first_day:
             interval_hours = 6 - result
-            behavior_coefficient, behavior_main = 1, "Двигаться c ориентированием: 100.0%"
+            behavior_coefficient, behavior_main = (
+                1,
+                "Двигаться c ориентированием: 100.0%",
+            )
 
         interval_radius = (
-            interval_hours
-            * normal_speed
-            * speed_index
-            * behavior_coefficient
+            interval_hours * normal_speed * speed_index * behavior_coefficient
         )
         total_radius += interval_radius
 
-        if(time_passed==0 or first_day):
+        if time_passed == 0 or first_day:
             list_of_radius += f"День {day}: "
-            first_day=False
+            first_day = False
 
-        list_of_radius += " ".join([str(round(interval_radius, 2)), str(behavior_main), str(weather), str(time)]) + " "
+        list_of_radius += (
+            " ".join(
+                [
+                    str(round(interval_radius, 2)),
+                    str(behavior_main),
+                    str(weather),
+                    str(time),
+                ]
+            )
+            + " "
+        )
         time_passed += 6
 
     if time_passed == 24:
         time_passed = 0
         day += 1
 
-    total_radius, list_of_radius = calculate_last_day(data, time_passed, -time_passed + time_of_finding_total, normal_speed, speed_index, total_radius, list_of_radius, day)
-    
+    total_radius, list_of_radius = calculate_last_day(
+        data,
+        time_passed,
+        -time_passed + time_of_finding_total,
+        normal_speed,
+        speed_index,
+        total_radius,
+        list_of_radius,
+        day,
+    )
+
     return total_radius, list_of_radius, previous_radius
+
 
 @app.route("/")
 def index():
     return render_template("base.html")
+
 
 @app.route("/radius", methods=["POST"])
 def radius():
@@ -388,13 +484,19 @@ def radius():
 
         date_time_of_loss_str = f"{date_of_loss_str} {time_of_loss_str}"
         date_time_of_finding_str = f"{date_of_finding_str} {time_of_finding_str}"
-        
-        date_time_of_loss = datetime.strptime(date_time_of_loss_str, "%d.%m.%Y %H:%M")
-        date_time_of_finding = datetime.strptime(date_time_of_finding_str, "%d.%m.%Y %H:%M")
 
-        hours_difference = (date_time_of_finding - date_time_of_loss).total_seconds() // 3600
-    
-        radius, extra_info, previous_radius = get_radius(data, int(data.get("age")), int(hours_difference))
+        date_time_of_loss = datetime.strptime(date_time_of_loss_str, "%d.%m.%Y %H:%M")
+        date_time_of_finding = datetime.strptime(
+            date_time_of_finding_str, "%d.%m.%Y %H:%M"
+        )
+
+        hours_difference = (
+            date_time_of_finding - date_time_of_loss
+        ).total_seconds() // 3600
+
+        radius, extra_info, previous_radius = get_radius(
+            data, int(data.get("age")), int(hours_difference)
+        )
 
         behavior_context = {
             "Возраст": int(data.get("age")),
@@ -408,27 +510,33 @@ def radius():
             "Моральные обязательства": str(data.get("moral_obligations")),
             "Внешние сигналы": str(data.get("external_signals")),
             "Дата": data.get("date_of_finding"),
-            "Время": time_of_finding_str
+            "Время": time_of_finding_str,
         }
 
         behavior, _ = predict_behavior(behavior_context)
         real_radius = make_real_radius(coordinates_psr, previous_radius, radius)
 
-        return jsonify({
-            "status": "success",
-            "radius": radius,
-            "coordinates_psr": coordinates_psr,
-            "coordinates_finding": coordinates_finding,
-            "behavior": behavior,
-            "extra_info": extra_info,
-            "previous_radius": previous_radius,
-            "real_radius": real_radius
-        })
-    
+        return jsonify(
+            {
+                "status": "success",
+                "radius": radius,
+                "coordinates_psr": coordinates_psr,
+                "coordinates_finding": coordinates_finding,
+                "behavior": behavior,
+                "extra_info": extra_info,
+                "previous_radius": previous_radius,
+                "real_radius": real_radius,
+            }
+        )
+
     except ValueError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
     except Exception as e:
-        return jsonify({"status": "error", "message": "Не удалось обработать запрос"}), 500
+        return (
+            jsonify({"status": "error", "message": "Не удалось обработать запрос"}),
+            500,
+        )
+
 
 if __name__ == "__main__":
     app.run(debug=True)
