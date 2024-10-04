@@ -1,8 +1,10 @@
 import glob
 import tensorflow as tf
+from ann.unet_model import model, dice_mc_metric, dice_bce_mc_loss
 
 print(f'Tensorflow version {tf.__version__}')
 print(f'GPU is {"ON" if tf.config.list_physical_devices("GPU") else "OFF" }')
+
 
 CLASSES = 5  # 5 классов: Дорога, Деревья, Поле, Вода, Фон
 
@@ -62,3 +64,17 @@ dataset = tf.data.Dataset.zip((images_dataset, masks_dataset))
 dataset = dataset.map(load_images, num_parallel_calls=tf.data.AUTOTUNE)
 dataset = dataset.repeat(100)
 dataset = dataset.map(augmentate_images, num_parallel_calls=tf.data.AUTOTUNE)
+
+train_dataset = dataset.take(2000).cache()
+test_dataset = dataset.skip(2000).take(100).cache()
+ 
+train_dataset = train_dataset.batch(8)
+test_dataset = test_dataset.batch(8)
+
+model.load_weights('ai/weights/model.weights.h5')
+
+# Компиляция модели
+model.compile(optimizer='adam', loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
+history_dice = model.fit(train_dataset, validation_data=test_dataset, epochs=25, initial_epoch=0)
+
+model.save_weights('weights/model.weights.h5')
