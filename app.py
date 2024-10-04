@@ -1,11 +1,53 @@
 import re
+import requests
 from datetime import datetime
+from bs4 import BeautifulSoup
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
 def get_weather_data(date, time):
-    pass 
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+    }
+    day, month, year = date.split('.')
+    hour = time.split(':')[0]
+
+    url = f"https://arhivpogodi.ru/arhiv/sankt-peterburg/{year}/{month}/"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print("Ошибка при выполнении запроса. Код состояния:", response.status_code)
+        return
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    day_pattern = rf',\s*({int(day)})\b'
+
+    date_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2')
+    holydate_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger')
+
+    weather = parse_weather(date_blocks, day_pattern, hour) or parse_weather(holydate_blocks, day_pattern, hour)
+
+    if weather:
+        return weather
+    else:
+        print(f"Информация о погоде на {day} число не найдена.")
+
+def parse_weather(date_blocks, day_pattern, hour):
+    for date_block in date_blocks:
+        date_text = date_block.get_text(strip=True)
+        if re.search(day_pattern, date_text):
+            hourly_blocks = date_block.find_parent('div').find_next_sibling().find_all('div', class_='d-inline-block')
+            for hour_block in hourly_blocks:
+                hour_text = hour_block.find('div', class_='text-center font-size-unset px-1 border-bottom').get_text(strip=True)
+                if hour_text == hour:
+                    rain_block = hour_block.find('div', class_='text-center font-size-unset px-1').find('img')
+                    if rain_block:
+                        if rain_block['src'] in ['/images/09n.png', '/images/09d.png', '/images/10n.png', '/images/10d.png', '/images/50n.png']:
+                            return 'bad'
+                        return 'good'
+    return None
 
 def calculate_probability(data):
     probabilities = {
