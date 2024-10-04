@@ -1,10 +1,16 @@
 import re
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
+
+def round_to_nearest_interval(hours):
+    if not (0 <= hours <= 24):
+        raise ValueError("Число должно быть в диапазоне от 0 до 24")
+    
+    return (hours // 6) * 6
 
 def get_weather_data(date, time):
     headers = {
@@ -142,8 +148,8 @@ def get_behavior_data(data, current_time, current_date, bad_mentality=0):
         "Знание местности": str(data.get("local_knowledge")),
         "Наличие телефона": str(data.get("phone")),
         "Время суток": times_of_day,
-        "Моральные обязательства": "unknown",
-        "Внешние сигналы": "unknown",
+        "Моральные обязательства": str(data.get('moral_obligations')),
+        "Внешние сигналы": str(data.get('external_signals')),
         "Дата": current_date,
         "Время": f"{current_time}:00"
     }
@@ -173,6 +179,117 @@ def get_behavior_coefficient(behavior_data):
 
     return behavior_coefficient, result_text.capitalize() + ' ' + str(max_percentage) + '%'
 
+def calculate_last_day(data,time_passed, hours, normal_speed, speed_index, total_radius, list_of_radius, day):
+    current_date = data.get('date_of_finding')
+    behavior_context, time = get_behavior_data(data, time_passed, current_date)
+
+    behavior_data, weather = predict_behavior(behavior_context)
+    behavior_coefficient, behavior_main = get_behavior_coefficient(behavior_data)
+
+    interval_radius = (
+        hours
+        * normal_speed
+        * speed_index
+        * behavior_coefficient
+    )
+    total_radius += interval_radius
+
+    if time_passed == 0:
+        list_of_radius += f"День {day}: "
+
+    list_of_radius += " ".join([str(round(interval_radius, 2)), str(behavior_main), str(weather), str(time)]) + " "
+    
+    return total_radius, list_of_radius
+
+def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
+    normal_speed = 5
+
+    if age < 18:
+        normal_speed = 4
+    elif age >= 60:
+        normal_speed = 3
+
+    terrain_passability_coefficient = terrain_passability if terrain_passability is not None else 1.0
+    path_curvature_coefficient = path_curvature if path_curvature is not None else 1.0
+    slope_degree_coefficient = slope_degree if slope_degree is not None else 1.0
+    fatigue_level_coefficient = fatigue_level if fatigue_level is not None else 1.0
+    time_of_day_coefficient = time_of_day if time_of_day is not None else 1.0
+    weather_conditions_coefficient = weather_conditions if weather_conditions is not None else 1.0
+    group_factor_coefficient = group_factor if group_factor is not None else 1.0
+
+    speed_index = (
+        terrain_passability_coefficient
+        * path_curvature_coefficient
+        * slope_degree_coefficient
+        * fatigue_level_coefficient
+        * time_of_day_coefficient
+        * weather_conditions_coefficient
+        * group_factor_coefficient
+    )
+
+    list_of_radius = ""
+    total_radius = 0
+    current_date = data.get("date_of_loss")
+
+    hours_of_loss, minutes_of_loss = map(int, data.get("time_of_loss").split(":"))
+    hour_of_finding, minutes_of_finding = map(int, data.get("time_of_finding").split(":"))
+
+    time_of_loss_total = hours_of_loss + minutes_of_loss / 60.0
+    time_of_finding_total = hour_of_finding + minutes_of_finding / 60.0
+
+    time_passed = round_to_nearest_interval(hours_of_loss)
+    result = time_of_loss_total - time_passed
+
+    day = 1
+    previous_radius = []
+    first_day=True 
+
+    for i in range(0, hours_elapsed, 6):
+        if(time_passed % 24 == 0 and time_passed != 0):
+            current_date = (datetime.strptime(current_date, "%d.%m.%Y") + timedelta(days=1)).strftime("%d.%m.%Y")
+            time_passed = 0
+            day += 1
+            previous_radius.append(total_radius)
+        
+        if day == 3: 
+            behavior_context, time = get_behavior_data(data, time_passed, current_date, 1) 
+        else: 
+            behavior_context, time = get_behavior_data(data, time_passed, current_date)
+
+        behavior_data, weather = predict_behavior(behavior_context)
+        behavior_coefficient, behavior_main = get_behavior_coefficient(behavior_data)
+
+        interval_hours = min(6, hours_elapsed - i) 
+        if interval_hours != 6:
+            continue
+
+        if first_day:
+            interval_hours = 6 - result
+            behavior_coefficient, behavior_main = 1, "Двигаться c ориентированием: 100.0%"
+
+        interval_radius = (
+            interval_hours
+            * normal_speed
+            * speed_index
+            * behavior_coefficient
+        )
+        total_radius += interval_radius
+
+        if(time_passed==0 or first_day):
+            list_of_radius += f'День {day}: '
+            first_day=False
+
+        list_of_radius += " ".join([str(round(interval_radius, 2)), str(behavior_main), str(weather), str(time)]) + " "
+        time_passed += 6
+
+    if time_passed == 24:
+        time_passed = 0
+        day += 1
+
+    total_radius, list_of_radius = calculate_last_day(data, time_passed, -time_passed + time_of_finding_total, normal_speed, speed_index, total_radius, list_of_radius, day)
+    
+    return total_radius, list_of_radius, previous_radius
+
 @app.route("/")
 def index():
     return render_template('base.html')
@@ -198,6 +315,8 @@ def radius():
 
         hours_difference = (date_time_of_finding - date_time_of_loss).total_seconds() // 3600
 
+        radius, extra_info, previous_radius = get_radius(data, int(data.get('age')), int(hours_difference))
+
         behavior_context = {
             'Возраст': int(data.get('age')),
             'Пол': str(data.get('gender')),
@@ -206,20 +325,23 @@ def radius():
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
             'Наличие телефона': str(data.get('phone')),
-            'Время суток': 'evening', 
-            'Моральные обязательства': "unknown",
-            'Внешние сигналы': "unknown",
-            'Дата': data.get('date_of_finding'), 
-            'Время': time_of_finding_str 
+            'Время суток': extra_info.split()[-1],
+            'Моральные обязательства': str(data.get('moral_obligations')),
+            'Внешние сигналы': str(data.get('external_signals')),
+            'Дата': data.get('date_of_finding'),
+            'Время': time_of_finding_str
         }
 
         behavior, _ = predict_behavior(behavior_context)
 
         return jsonify({
             'status': 'success',
+            'radius': radius,
             'coordinates_psr': coordinates_psr,
             'coordinates_finding': coordinates_finding,
-            'behavior': behavior
+            'behavior': behavior,
+            'extra_info': extra_info,
+            'previous_radius': previous_radius,
         })
     
     except ValueError as e:
