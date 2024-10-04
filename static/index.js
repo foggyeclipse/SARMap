@@ -98,40 +98,35 @@ $(document).ready(function () {
                         .bindTooltip('Центр ПСР')
                         .openTooltip();
 
-                    var circles = [];
-                    var radiusInMeters = response.radius * 1000;
-                    var circle = L.circle([response.coordinates_psr.latitude, response.coordinates_psr.longitude], {
+                    var maskCoords = response.real_radius;
+    
+                    var polygon = L.polygon(maskCoords[maskCoords.length-1], {
                         color: 'blue',
                         fillColor: '#add8e6',
-                        fillOpacity: 0.5,
-                        radius: radiusInMeters
+                        fillOpacity: 0.5
                     }).addTo(map);
 
-                    circle.bindTooltip("Общий радиус: " + response.radius + " км", {
+                    polygon.bindTooltip("Общий радиус: " + response.radius + " км", {
                         permanent: false,
-                        direction: 'top',
-                        className: 'circle-tooltip'
+                        direction: 'top'
                     });
-                    circles.push(circle);
 
 
-                    for (var i = response.previous_radius.length - 1; i >= 0; i--) {
+
+                    for (var i = maskCoords.length - 2; i >= 0; i--) {
                         var radius = response.previous_radius[i];
-                        var radiusInMeters = radius * 1000;
 
-                        var circle = L.circle([response.coordinates_psr.latitude, response.coordinates_psr.longitude], {
+                        var polygon = L.polygon(maskCoords[i], {
                             color: 'blue',
                             fillColor: '#add8e6',
-                            fillOpacity: 0,
-                            radius: radiusInMeters
+                            fillOpacity: 0.5
                         }).addTo(map);
 
-                        circle.bindTooltip("День " + parseInt(i+1, 10) + " радиус: " + radius + " км", {
+                        polygon.bindTooltip("День " + parseInt(i+1, 10) + " радиус: " + radius + " км", {
                             permanent: false,
-                            direction: 'top',
-                            className: 'circle-tooltip'
+                            direction: 'top'
                         });
-                        circles.push(circle);
+
                     }
 
                     if (response.coordinates_finding) {
@@ -145,9 +140,9 @@ $(document).ready(function () {
                     document.getElementById('result').innerHTML = "Вероятности поведения потерявшегося на текущий момент:<br>";
                     document.getElementById('result').innerHTML += response.behavior.replace(/%/g, '%  <br>');
 
+
                     $('#loader').hide();
                     $('#overlay').hide();
-
                     function generateReportFromText(text) {
                         const container = document.getElementById('report');
                         container.innerHTML = ''; 
