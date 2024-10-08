@@ -23,14 +23,14 @@ def round_to_nearest_interval(hours):
 
 
 ZOOM_LEVELS = {
-    (0, 1): 3.76,
-    (1, 3): 1.88,
-    (3, 6): 0.94,
-    (6, 13): 0.47,
-    (13, 26): 0.235,
-    (26, 53): 0.1175,
-    (53, 106): 0.05875,
-    (106, float("inf")): 0.029375,
+    (0, 1): (3.76, 0.125),
+    (1, 3): (1.88, 0.25),
+    (3, 6): (0.94, 0.5),
+    (6, 13): (0.47, 1),
+    (13, 26): (0.235, 2),
+    (26, 53): (0.1175, 4),
+    (53, 106): (0.05875, 8),
+    (106, float("inf")): (0.029375, 16),
 }
 
 
@@ -76,14 +76,15 @@ def make_real_radius(coords_psr, prev_radius, radius):
             post_edit(masked_frame)
 
             zoom_factor = get_zoom_factor(prev_radius[i])
+            ind = zoom_factor[1]
 
             pixels_per_cm = calculate_pixels_per_centimeter(1920, 1080, 14)
 
-            radius_in_pixel = int(prev_radius[i] * zoom_factor * pixels_per_cm)
+            radius_in_pixel = int(prev_radius[i] * zoom_factor[0] * pixels_per_cm)
 
             result, center = make_radius_mask(masked_frame, radius_in_pixel)
             make_txt_mask_of_radius(
-                masked_frame, coords_psr, prev_radius[i], result, center
+                masked_frame, coords_psr, prev_radius[i], result, center, zoom_factor[0], ind
             )
 
     except Exception as e:
@@ -495,7 +496,8 @@ def radius():
         ).total_seconds() // 3600
 
         radius, extra_info, previous_radius = get_radius(
-            data, int(data.get("age")), int(hours_difference)
+            data, int(data.get("age")), int(hours_difference), 
+            float(data.get("terrain_passability")), float(data.get("path_curvature")), float(data.get("slope_angle"))
         )
 
         behavior_context = {
