@@ -18,10 +18,10 @@ def pixel_to_latlng(pixel_coords, img_size, map_center, scale_factor, scale_fact
     return latlng_coords
 
 
-def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
+def make_txt_mask_of_radius(p, coords_psr, radius, result, center, zoom_factor, ind):
     kernel = np.ones((5, 5), np.uint8)
     # Применение эрозии перед дилатацией для уменьшения артефактов
-    result = cv2.erode(result, kernel, iterations=2)
+    result = cv2.erode(result, kernel, iterations=4)
     result = cv2.dilate(result, kernel, iterations=3)
     result = cv2.Canny(result, 100, 200)
     mask1 = np.zeros((result.shape[0] + 2, result.shape[1] + 2), np.uint8)
@@ -39,8 +39,8 @@ def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
     map_center = coords_psr
     radius = radius
 
-    scale_factor = 0.000894 * 805 / img_size[0] * radius / 10
-    scale_factor_y = 0.00045 * 486 / img_size[1] * radius / 10
+    scale_factor = (0.001 / zoom_factor / 61.94902053099826) * radius / ind
+    scale_factor_y = (0.0005 / zoom_factor / 61.94902053099826) * radius / ind
 
     latlng_coords = pixel_to_latlng(
         coords, img_size, map_center, scale_factor, scale_factor_y

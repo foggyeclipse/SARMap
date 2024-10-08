@@ -55,9 +55,9 @@ $(document).ready(function () {
             experience: $('#experience').val() || null,
             local_knowledge: $('#local_knowledge').val() || null,
             phone: $('#phone').val() || null,
-            terrain_passability: $('#terrain_passability').val() || null,
-            path_curvature: $('#path_curvature').val() || null,
-            slope_angle: $('#slope_angle').val() || null,
+            terrain_passability: $('#terrain_passability').val() || 1,
+            path_curvature: $('#path_curvature').val() || 1,
+            slope_angle: $('#slope_angle').val() || 1,
             coordinates_psr: {
                 latitude: parseCoordinate($('#psr_lat').val()),
                 longitude: parseCoordinate($('#psr_lon').val())
